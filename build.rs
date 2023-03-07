@@ -1,6 +1,29 @@
-use std::{env::var, fs::create_dir, path::PathBuf, process::Command};
+// MIT License
+//
+// qemu-cannoli Copyright (c) 2023 Stephanie Aelmore
+// qemu-rs Copyright (c) 2022 Rowan Hart
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
-use git2::{build::CheckoutBuilder, Repository};
+use std::{env::var, fs::create_dir, path::{PathBuf, Path}, process::Command};
+
+use git2::{build::CheckoutBuilder, Diff, Oid, Repository};
 
 const QEMU_GIT_URL: &str = "https://github.com/qemu/qemu.git";
 
@@ -209,7 +232,7 @@ fn get_target_list() -> Vec<String> {
     target_architectures
 }
 
-fn build_qemu_configure_args(build_path: &PathBuf) -> Vec<String> {
+fn build_qemu_configure_args(build_path: &Path) -> Vec<String> {
     let mut configure_args = Vec::new();
 
     // Conditional target options
@@ -698,10 +721,27 @@ fn main() {
         Ok(repo) => repo,
     };
 
+    // Checkout the commit used for Cannoli
+    let oid_str = "00b1faea41d283e931256aa78aa975a369ec3ae6";
+    let oid = Oid::from_str(oid_str).unwrap();
+    repo.set_head_detached(oid).unwrap();
     repo.checkout_head(Some(CheckoutBuilder::default().force()))
         .expect("Failed to checkout repository");
 
-    let configure_args = build_qemu_configure_args(&qemu_install_path);
+    // Apply Cannoli patch
+    let patch = Diff::from_buffer(include_bytes!("cannoli.patch")).unwrap();
+    repo.apply(&patch, git2::ApplyLocation::WorkDir, None)
+        .unwrap();
+
+    let mut configure_args = build_qemu_configure_args(&qemu_install_path);
+
+    // Configure with-cannoli
+    let mut cannoli_path = PathBuf::from(
+        var("CARGO_MANIFEST_DIR")
+            .expect("CARGO_MANIFEST_DIR not set. Is build.rs being run correctly by cargo build?"),
+    );
+    cannoli_path.pop();
+    configure_args.push(format!("--with-cannoli={}", cannoli_path.to_str().unwrap()));
 
     let configure_prog = qemu_repo_path
         .join("configure")
@@ -732,7 +772,7 @@ fn main() {
         .current_dir(&qemu_build_path)
         .args(&configure_args)
         .arg(
-            &repo
+            repo
                 .path()
                 .parent()
                 .expect("Could not find parent of repo path"),
@@ -760,7 +800,7 @@ fn main() {
             true => "qemu-system-".to_string() + &enabled_target.replace("-softmmu", ""),
             false => "qemu-".to_string() + &enabled_target.replace("-linux-user", ""),
         };
-        let target_bin = qemu_install_path.join("bin").join(&target_name);
+        let target_bin = qemu_install_path.join("bin").join(target_name);
         if !target_bin.exists() {
             panic!("Failed to build target {:?}", target_bin);
         }
