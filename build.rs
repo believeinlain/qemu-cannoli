@@ -22,7 +22,7 @@
 // SOFTWARE.
 
 use std::{
-    env::var,
+    env::{var, self},
     fs::create_dir,
     path::{Path, PathBuf},
     process::Command,
@@ -745,6 +745,7 @@ fn main() {
         var("CARGO_MANIFEST_DIR")
             .expect("CARGO_MANIFEST_DIR not set. Is build.rs being run correctly by cargo build?"),
     );
+    panic!("{:?}", env::current_dir());
     cannoli_path.pop();
     configure_args.push(format!("--with-cannoli={}", cannoli_path.to_str().unwrap()));
 
