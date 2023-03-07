@@ -21,7 +21,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use std::{env::var, fs::create_dir, path::{PathBuf, Path}, process::Command};
+use std::{
+    env::var,
+    fs::create_dir,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 use git2::{build::CheckoutBuilder, Diff, Oid, Repository};
 
@@ -772,8 +777,7 @@ fn main() {
         .current_dir(&qemu_build_path)
         .args(&configure_args)
         .arg(
-            repo
-                .path()
+            repo.path()
                 .parent()
                 .expect("Could not find parent of repo path"),
         )
