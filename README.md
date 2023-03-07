@@ -1,5 +1,7 @@
 # qemu
 
+*Note: this fork does not currently work due to difficulty resolving the cannoli path*
+
 This crate provides an installer for QEMU binaries. You can use it to install QEMU
 system and user mode emulators and use them in your code.
 
