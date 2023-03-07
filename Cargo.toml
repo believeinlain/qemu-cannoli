@@ -1,14 +1,12 @@
 [package]
-name = "qemu"
-version = "0.1.6"
+name = "qemu-cannoli"
+version = "0.1.0"
 edition = "2021"
-description = "QEMU binary and utility installer"
+description = "QEMU binary and utility installer, with cannoli patch applied"
 license = "MIT"
-repository = "https://github.com/novafacing/qemu-rs.git"
+repository = "https://github.com/believeinlain/qemu-cannoli.git"
 keywords = ["emulation", "qemu", "emulator"]
 categories = ["emulators"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 
